@@ -61,7 +61,31 @@ namespace RPGTests
         [TestMethod]
         public void Character_Heals()
         {
+            //create characters and other varaibles
+            Character character = new Character();
+            Character characterTwo = new Character();
+            int maxHealth = 1000;
+            int moreThanMax = 1001;
 
+            //get the damage 1 will do to 2
+            int damageToDeal = character.Attack();
+            characterTwo.DealtDamage(damageToDeal);
+
+            var healthAtDamage = characterTwo.Health;
+
+            //heal
+            int healthToHeal = character.HealOther();
+            characterTwo.Heal(healthToHeal);
+
+            var healthAfterHeal = characterTwo.Health;
+
+            //over heal
+
+
+            //2's health should equal the health healed variable we created
+            Assert.AreNotEqual(maxHealth, characterTwo.Health, "Damage was not dealt.");
+            //health should never go above 1000
+            Assert.AreEqual(zeroHealth, character.Health, "Damage was below 0.");
         }
     }
 }
