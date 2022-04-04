@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using RPGCombat;
+using System.Diagnostics;
 
 namespace RPGTests
 {
@@ -7,7 +8,7 @@ namespace RPGTests
     public class CharacterTests
     {
         [TestMethod]
-        public void Character_Created_Properly()
+        public void Created_Character_CreatedProperly()
         {
             //Create character and variables to test
             Character character = new Character();
@@ -22,7 +23,7 @@ namespace RPGTests
         }
 
         [TestMethod]
-        public void Character_DealsDamage()
+        public void DealtDamage_CharacterAttack_DealsDamageAndDoesntGoUnder0Health()
         {
             //create characters
             Character character = new Character();
@@ -45,7 +46,7 @@ namespace RPGTests
         }
 
         [TestMethod]
-        public void Character_Dies()
+        public void DealtDamage_CharacterAttack_KillsCharacter()
         {
             //create character and other variables
             Character character = new Character();
@@ -59,7 +60,7 @@ namespace RPGTests
         }
 
         [TestMethod]
-        public void Character_Heals()
+        public void Heal_CharacterHeals_HealsOtherCharacterAndDoesntGoOverMax()
         {
             //create characters and other varaibles
             Character character = new Character();
@@ -80,12 +81,12 @@ namespace RPGTests
             var healthAfterHeal = characterTwo.Health;
 
             //over heal
+            characterTwo.Heal(moreThanMax);
 
-
-            //2's health should equal the health healed variable we created
-            Assert.AreNotEqual(maxHealth, characterTwo.Health, "Damage was not dealt.");
+            //Character twos health after heal should not equal the health after damage.
+            Assert.AreNotEqual(healthAtDamage, healthAfterHeal, "Character was not healed.");
             //health should never go above 1000
-            Assert.AreEqual(zeroHealth, character.Health, "Damage was below 0.");
+            Assert.AreEqual(maxHealth, character.Health, "Health exceeded max.");
         }
     }
 }
