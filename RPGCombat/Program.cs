@@ -12,48 +12,82 @@ namespace RPGCombat
             Alive = true;
         }
 
+        public int CharacterId { get; set; }
         public int Health { get; set; }
         public int Level { get; set; }
         public bool Alive { get; set; }
+        public int RangeToTarget { get; set; }
+        public FighterType FighterType { get; set; }
 
-        public void DealtDamage(int damageDealt)
+
+        public void Attack(Character characterToAttack, int overrideDamage = 0)
         {
-            //ensure we don't go under 0
-            this.Health = Math.Max(this.Health - damageDealt, 0);
+            //character cannot attack itself.
+            if (characterToAttack == this)
+                throw new ApplicationException("Character cannot attack itself!");
 
-            //if health reached 0 : dies
-            if (this.Health == 0)
+            //ensure target is within range
+            if(this.RangeToTarget <= this.FighterType.RangeRequiredForAttack)
             {
-                this.Alive = false;
+                var damage = 0;
+                if (overrideDamage != 0)
+                {
+                    //subtract damage from health of the character
+                    characterToAttack.Health = Math.Max(characterToAttack.Health - overrideDamage, 0);
+                }
+                else
+                {
+                    //get damage
+                    damage = 100;
+
+                    //if level of defender is 5 or more we half the damage.
+                    //if the defender is 5 or more levels under we double it.
+                    if (characterToAttack.Level >= this.Level + 5)
+                    {
+                        damage /= 2;
+                    }
+                    else if (characterToAttack.Level <= this.Level - 5)
+                    {
+                        damage *= 2;
+                    }
+
+                    //subtract damage from health of the character
+                    characterToAttack.Health = Math.Max(characterToAttack.Health - damage, 0);
+                }
+
+                //if health reached 0 : dies
+                if (characterToAttack.Health == 0)
+                {
+                    characterToAttack.Alive = false;
+                }
             }
         }
 
-        /// <summary>
-        /// Returns damage to deal.
-        /// </summary>
-        /// <returns></returns>
-        public int Attack()
+        public void Heal(Character characterToHeal, int healthReceivedOverride = 0)
         {
-            Random random = new Random();
-            return random.Next(10, 100);
-        }
+            //player can only heal itself
+            if (characterToHeal != this)
+                throw new ApplicationException("Character cannot heal another!");
 
-        public void Heal(int healthReceived)
-        {
             if (!this.Alive)
             {
                 throw new ApplicationException("This player is dead and cannot be healed.");
             }
 
-            //ensure we don't go over 1000
-            this.Health = Math.Min(this.Health + healthReceived, 1000);
+            if (healthReceivedOverride != 0)
+            {
+                //ensure we don't go over 1000
+                this.Health = Math.Min(this.Health + healthReceivedOverride, 1000);
+            }
+            else
+            {
+                //get health to heal
+                int health = 100;
 
-        }
+                //ensure we don't go over 1000
+                this.Health = Math.Min(this.Health + health, 1000);
+            }
 
-        public int HealOther()
-        {
-            Random random = new Random();
-            return random.Next(100, 500);
         }
 
 
@@ -61,5 +95,12 @@ namespace RPGCombat
         {
             Console.WriteLine("Hello World!");
         }
+    }
+
+    public class FighterType
+    {
+        public int FighterTypeId { get; set; }
+        public string Type { get; set; }
+        public int RangeRequiredForAttack { get; set; }
     }
 }
