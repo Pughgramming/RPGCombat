@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace RPGCombat
 {
@@ -10,6 +12,7 @@ namespace RPGCombat
             Health = 1000;
             Level = 1;
             Alive = true;
+            Factions = new List<Faction>();
         }
 
         public int CharacterId { get; set; }
@@ -18,7 +21,7 @@ namespace RPGCombat
         public bool Alive { get; set; }
         public int RangeToTarget { get; set; }
         public FighterType FighterType { get; set; }
-
+        public List<Faction> Factions { get; set; }
 
         public void Attack(Character characterToAttack, int overrideDamage = 0)
         {
@@ -27,8 +30,17 @@ namespace RPGCombat
                 throw new ApplicationException("Character cannot attack itself!");
 
             //ensure target is within range
-            if(this.RangeToTarget <= this.FighterType.RangeRequiredForAttack)
+            if (this.RangeToTarget <= this.FighterType.RangeRequiredForAttack)
             {
+                //ensure is not an ally
+                foreach(var fac in this.Factions)
+                {
+                    if (characterToAttack.Factions.Contains(fac))
+                    {
+                        throw new ApplicationException("Cannot attack an ally!");
+                    }
+                }
+
                 var damage = 0;
                 if (overrideDamage != 0)
                 {
@@ -63,11 +75,41 @@ namespace RPGCombat
             }
         }
 
+        public void Attack(Prop propToAttack, int damage = 0)
+        {
+            if(damage == 0)
+            {
+                damage = 100;
+            }
+
+            //deal damage
+            propToAttack.Health = Math.Max(propToAttack.Health - damage, 0);
+
+            //if props health drops to 0 : destroyed
+            if (propToAttack.Health == 0)
+            {
+                propToAttack.IsDestroyed = true;
+            }
+        }
+
         public void Heal(Character characterToHeal, int healthReceivedOverride = 0)
         {
-            //player can only heal itself
+            //player can only heal itself or another ally
             if (characterToHeal != this)
-                throw new ApplicationException("Character cannot heal another!");
+            {
+                //if character to heal or the character healing isn't in a faction, throw exception
+                if(characterToHeal.Factions.Count() == 0 || this.Factions.Count() == 0)
+                    throw new ApplicationException("You can only heal characters in your faction!");
+
+                //check to see if character to heal is in healers faction.
+                foreach (var fac in this.Factions)
+                {
+                    if (!characterToHeal.Factions.Contains(fac))
+                    {
+                        throw new ApplicationException("You can only heal characters in your faction!");
+                    }
+                }
+            }
 
             if (!this.Alive)
             {
@@ -90,6 +132,28 @@ namespace RPGCombat
 
         }
 
+        public void JoinFaction(string factionName)
+        {
+            this.Factions.Add(new Faction()
+            {
+                Name = factionName
+            });
+        }
+
+        public void LeaveFaction(string factionName)
+        {
+            var factionToLeave = this.Factions.Where(x => x.Name == factionName).FirstOrDefault();
+
+            if (factionToLeave != null)
+            {
+                this.Factions.Remove(factionToLeave);
+            }
+            else
+            {
+                throw new ApplicationException("Faction: " + factionName + " does not exist.");
+            }
+
+        }
 
         static void Main(string[] args)
         {
@@ -102,5 +166,30 @@ namespace RPGCombat
         public int FighterTypeId { get; set; }
         public string Type { get; set; }
         public int RangeRequiredForAttack { get; set; }
+    }
+
+    public class Faction
+    {
+        public int FactionId { get; set; }
+        public string Name { get; set; }
+    }
+
+    public class Prop
+    {
+        public Prop()
+        {
+            Health = 1000;
+            IsDestroyed = false;
+        }
+        public Prop(int health)
+        {
+            Health = health;
+            IsDestroyed = false;
+        }
+
+        public int PropId { get; set; }
+        public string PropName { get; set; }
+        public int Health { get; set; }
+        public bool IsDestroyed { get; set; }
     }
 }

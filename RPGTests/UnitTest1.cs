@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using RPGCombat;
 using System;
 using System.Diagnostics;
+using System.Linq;
 
 namespace RPGTests
 {
@@ -49,6 +50,7 @@ namespace RPGTests
             Character characterTwo = new Character();
             character.RangeToTarget = 1;
             character.FighterType = new FighterType() { Type = "Melee", RangeRequiredForAttack = 2 };
+
             int damage = 1001;
             int healthAtZero = 0;
             bool isAlive = false;
@@ -91,16 +93,6 @@ namespace RPGTests
 
             //assert an exception is thrown when attack is called on itself
             Assert.ThrowsException<ApplicationException>(() => character.Attack(character), "Exception was not thrown.");
-        }
-
-        [TestMethod]
-        public void Heal_CharacterHeals_CharacterCannotHealAnother()
-        {
-            Character character = new Character();
-            Character characterTwo = new Character();
-
-            //assert an exception is thrown when heal is called on another
-            Assert.ThrowsException<ApplicationException>(() => character.Heal(characterTwo), "Exception was not thrown.");
         }
 
         [TestMethod]
@@ -205,6 +197,92 @@ namespace RPGTests
 
             //assert target was not hit
             Assert.AreEqual(maxHealth, characterTwo.Health, "Character was attacked.");
+        }
+
+        [TestMethod]
+        public void Faction_JoinFaction_CharacterCanJoinFaction()
+        {
+            //create characters
+            Character character = new Character();
+            string factionName = "Hawks";
+
+            //join faction
+            character.JoinFaction(factionName);
+
+            var characterFactionName = character.Factions.Where(x => x.Name == factionName).Select(x => x.Name).FirstOrDefault();
+            //assert an exception is thrown when attacking an ally
+            Assert.AreEqual(factionName, characterFactionName, "Faction was not joined");
+        }
+
+        [TestMethod]
+        public void Faction_LeaveFaction_CharacterCanLeaveFaction()
+        {
+            //create characters
+            Character character = new Character();
+            string factionName = "Hawks";
+
+            //join faction
+            character.JoinFaction(factionName);
+            //leave faction
+            character.LeaveFaction(factionName);
+
+            var characterFactionName = character.Factions.Where(x => x.Name == factionName).Select(x => x.Name).FirstOrDefault();
+            //assert an exception is thrown when attacking an ally
+            Assert.AreEqual(null, characterFactionName, "Faction was not left");
+        }
+
+        [TestMethod]
+        public void Heal_CharacterHeals_CharacterCannotHealAnotherWhenNotInFaction()
+        {
+            Character character = new Character();
+            Character characterTwo = new Character();
+
+            //assert an exception is thrown when heal is called on another when characters don't have factions
+            Assert.ThrowsException<ApplicationException>(() => character.Heal(characterTwo), "Exception was not thrown.");
+        }
+
+        [TestMethod]
+        public void Heal_CharacterHeals_CharacterCannotHealAnotherOutSideOfFaction()
+        {
+            Character character = new Character();
+            Character characterTwo = new Character();
+            character.JoinFaction("Seals");
+            characterTwo.JoinFaction("Hawks");
+
+            //assert an exception is thrown when heal is called on another when characters aren't in the same faction
+            Assert.ThrowsException<ApplicationException>(() => character.Heal(characterTwo), "Exception was not thrown.");
+        }
+
+        [TestMethod]
+        public void Attack_CharacterAttacks_CharacterCannotAttackAlly()
+        {
+            //create characters
+            Character character = new Character();
+            Character characterTwo = new Character();
+
+            character.JoinFaction("Hawks");
+            characterTwo.JoinFaction("Hawks");
+
+            //assert an exception is thrown when attacking an ally
+            Assert.ThrowsException<ApplicationException>(() => character.Attack(character), "Exception was not thrown.");
+        }
+
+        [TestMethod]
+        public void Attack_CharacterAttacks_CharacterAttacksProp()
+        {
+            //create actors
+            Character character = new Character();
+            Prop prop = new Prop() { PropName = "Tree" };
+            int maxPropHealth = 1000;
+            int overrideDamage = 1000;
+            bool isTrue = true;
+
+            //attack prop
+            character.Attack(prop, overrideDamage);
+
+            //prop is attacked and destroyed
+            Assert.AreNotEqual(maxPropHealth, prop.Health, "Prop was not attacked");
+            Assert.AreEqual(true, prop.IsDestroyed, "Prop was not destroyed");
         }
     }
 }
