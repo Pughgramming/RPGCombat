@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\RPGCombat\RPGCombat.csproj" />
+    <ProjectReference Include="..\RPGCombat.Domain\RPGCombat.Domain.csproj" />
   </ItemGroup>
 
 </Project>

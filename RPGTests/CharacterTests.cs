@@ -3,12 +3,14 @@ using RPGCombat;
 using System;
 using System.Diagnostics;
 using System.Linq;
+using RPGCombat.Domain;
 
 namespace RPGTests
 {
     [TestClass]
     public class CharacterTests
     {
+        #region Create
         [TestMethod]
         public void Created_Character_CreatedProperly()
         {
@@ -23,7 +25,9 @@ namespace RPGTests
             Assert.AreEqual(levelExpected, character.Level, "Level not created properly");
             Assert.AreEqual(isAlive, character.Alive, "Character is dead on start..");
         }
+        #endregion
 
+        #region Attack/Damage
         [TestMethod]
         public void DealtDamage_CharacterAttack_DealsDamage()
         {
@@ -64,28 +68,6 @@ namespace RPGTests
         }
 
         [TestMethod]
-        public void Heal_CharacterHeals_HealsCharacterAndDoesntGoOverMax()
-        {
-            //create characters and other varaibles
-            Character character = new Character();
-            int maxHealth = 1000;
-            int moreThanMax = 1001;
-            int damage = 100;
-
-            //set character health
-            character.Health = damage;
-
-            var healthAfterDamage = character.Health;
-
-            //overheal
-            character.Heal(character, moreThanMax);
-
-            //assert character healed and didn't go over max
-            Assert.AreNotEqual(healthAfterDamage, character.Health, "Character was not healed");
-            Assert.AreEqual(maxHealth, character.Health, "Character was overhealed");
-        }
-
-        [TestMethod]
         public void Attack_CharacterAttacks_CharacterCannotAttackItself()
         {
             //create characters
@@ -110,7 +92,7 @@ namespace RPGTests
             character.Attack(characterTwo);
 
             //assert
-            Assert.AreEqual(healthAfterDamage, characterTwo.Health, "Damage didn't double");  
+            Assert.AreEqual(healthAfterDamage, characterTwo.Health, "Damage didn't double");
         }
 
         [TestMethod]
@@ -200,60 +182,6 @@ namespace RPGTests
         }
 
         [TestMethod]
-        public void Faction_JoinFaction_CharacterCanJoinFaction()
-        {
-            //create characters
-            Character character = new Character();
-            string factionName = "Hawks";
-
-            //join faction
-            character.JoinFaction(factionName);
-
-            var characterFactionName = character.Factions.Where(x => x.Name == factionName).Select(x => x.Name).FirstOrDefault();
-            //assert an exception is thrown when attacking an ally
-            Assert.AreEqual(factionName, characterFactionName, "Faction was not joined");
-        }
-
-        [TestMethod]
-        public void Faction_LeaveFaction_CharacterCanLeaveFaction()
-        {
-            //create characters
-            Character character = new Character();
-            string factionName = "Hawks";
-
-            //join faction
-            character.JoinFaction(factionName);
-            //leave faction
-            character.LeaveFaction(factionName);
-
-            var characterFactionName = character.Factions.Where(x => x.Name == factionName).Select(x => x.Name).FirstOrDefault();
-            //assert an exception is thrown when attacking an ally
-            Assert.AreEqual(null, characterFactionName, "Faction was not left");
-        }
-
-        [TestMethod]
-        public void Heal_CharacterHeals_CharacterCannotHealAnotherWhenNotInFaction()
-        {
-            Character character = new Character();
-            Character characterTwo = new Character();
-
-            //assert an exception is thrown when heal is called on another when characters don't have factions
-            Assert.ThrowsException<ApplicationException>(() => character.Heal(characterTwo), "Exception was not thrown.");
-        }
-
-        [TestMethod]
-        public void Heal_CharacterHeals_CharacterCannotHealAnotherOutSideOfFaction()
-        {
-            Character character = new Character();
-            Character characterTwo = new Character();
-            character.JoinFaction("Seals");
-            characterTwo.JoinFaction("Hawks");
-
-            //assert an exception is thrown when heal is called on another when characters aren't in the same faction
-            Assert.ThrowsException<ApplicationException>(() => character.Heal(characterTwo), "Exception was not thrown.");
-        }
-
-        [TestMethod]
         public void Attack_CharacterAttacks_CharacterCannotAttackAlly()
         {
             //create characters
@@ -284,5 +212,52 @@ namespace RPGTests
             Assert.AreNotEqual(maxPropHealth, prop.Health, "Prop was not attacked");
             Assert.AreEqual(true, prop.IsDestroyed, "Prop was not destroyed");
         }
+        #endregion
+
+        #region Heal
+        [TestMethod]
+        public void Heal_CharacterHeals_HealsCharacterAndDoesntGoOverMax()
+        {
+            //create characters and other varaibles
+            Character character = new Character();
+            int maxHealth = 1000;
+            int moreThanMax = 1001;
+            int damage = 100;
+
+            //set character health
+            character.Health = damage;
+
+            var healthAfterDamage = character.Health;
+
+            //overheal
+            character.Heal(character, moreThanMax);
+
+            //assert character healed and didn't go over max
+            Assert.AreNotEqual(healthAfterDamage, character.Health, "Character was not healed");
+            Assert.AreEqual(maxHealth, character.Health, "Character was overhealed");
+        }
+
+        [TestMethod]
+        public void Heal_CharacterHeals_CharacterCannotHealAnotherWhenNotInFaction()
+        {
+            Character character = new Character();
+            Character characterTwo = new Character();
+
+            //assert an exception is thrown when heal is called on another when characters don't have factions
+            Assert.ThrowsException<ApplicationException>(() => character.Heal(characterTwo), "Exception was not thrown.");
+        }
+
+        [TestMethod]
+        public void Heal_CharacterHeals_CharacterCannotHealAnotherOutSideOfFaction()
+        {
+            Character character = new Character();
+            Character characterTwo = new Character();
+            character.JoinFaction("Seals");
+            characterTwo.JoinFaction("Hawks");
+
+            //assert an exception is thrown when heal is called on another when characters aren't in the same faction
+            Assert.ThrowsException<ApplicationException>(() => character.Heal(characterTwo), "Exception was not thrown.");
+        }
+        #endregion
     }
 }
