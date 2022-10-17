@@ -1,134 +1,98 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using RPGCombat.Domain.DomainEvents;
 
 namespace RPGCombat.Domain
 {
-    public class Character
+    /// <summary>
+    /// Refactored to add domain event / subscriber system to clean up code.
+    /// Allows for much smoother rule checking and testing.
+    /// Also makes for much more readable code.
+    /// </summary>
+    public class Character : Targetable
     {
+        private const int MaxHealth = 1000;
+
         public Character()
         {
+            CharacterId = IdGenerator.Next();
             Health = 1000;
             Level = 1;
             Alive = true;
             Factions = new List<Faction>();
+
+            Bus.Subscribe<HealCharacter>(Heal);
+            Bus.Subscribe<AttackCharacter>(Attack);
         }
 
         public int CharacterId { get; set; }
-        public int Health { get; set; }
         public int Level { get; set; }
-        public bool Alive { get; set; }
-        public int RangeToTarget { get; set; }
-        public FighterType FighterType { get; set; }
+        public int Range { get; set; }
         public List<Faction> Factions { get; set; }
 
-        public void Attack(Character characterToAttack, int overrideDamage = 0)
+        private void Heal(HealCharacter healCharacterEvent)
         {
-            //character cannot attack itself.
-            if (characterToAttack == this)
-                throw new ApplicationException("Character cannot attack itself!");
-
-            //ensure target is within range
-            if (this.RangeToTarget <= this.FighterType.RangeRequiredForAttack)
-            {
-                //ensure is not an ally
-                foreach (var fac in this.Factions)
-                {
-                    if (characterToAttack.Factions.Contains(fac))
-                    {
-                        throw new ApplicationException("Cannot attack an ally!");
-                    }
-                }
-
-                var damage = 0;
-                if (overrideDamage != 0)
-                {
-                    //subtract damage from health of the character
-                    characterToAttack.Health = Math.Max(characterToAttack.Health - overrideDamage, 0);
-                }
-                else
-                {
-                    //get damage
-                    damage = 100;
-
-                    //if level of defender is 5 or more we half the damage.
-                    //if the defender is 5 or more levels under we double it.
-                    if (characterToAttack.Level >= this.Level + 5)
-                    {
-                        damage /= 2;
-                    }
-                    else if (characterToAttack.Level <= this.Level - 5)
-                    {
-                        damage *= 2;
-                    }
-
-                    //subtract damage from health of the character
-                    characterToAttack.Health = Math.Max(characterToAttack.Health - damage, 0);
-                }
-
-                //if health reached 0 : dies
-                if (characterToAttack.Health == 0)
-                {
-                    characterToAttack.Alive = false;
-                }
-            }
+            if (!Alive) return;
+            if (!HealingSelf(healCharacterEvent) && !IsSameFaction(healCharacterEvent.HealingCharacter)) return;
+            Health += healCharacterEvent.HealthGain;
+            if (Health > MaxHealth) Health = MaxHealth;
         }
 
-        public void Attack(Prop propToAttack, int damage = 0)
+        private bool HealingSelf(HealCharacter healCharacterEvent)
         {
-            if (damage == 0)
-            {
-                damage = 100;
-            }
-
-            //deal damage
-            propToAttack.Health = Math.Max(propToAttack.Health - damage, 0);
-
-            //if props health drops to 0 : destroyed
-            if (propToAttack.Health == 0)
-            {
-                propToAttack.IsDestroyed = true;
-            }
+            return healCharacterEvent.HealingCharacter.CharacterId == CharacterId && healCharacterEvent.CharacterToHeal.CharacterId == CharacterId;
         }
 
-        public void Heal(Character characterToHeal, int healthReceivedOverride = 0)
+        private void Attack(AttackCharacter attackCharacterEvent)
         {
-            //player can only heal itself or another ally
-            if (characterToHeal != this)
-            {
-                //if character to heal or the character healing isn't in a faction, throw exception
-                if (characterToHeal.Factions.Count() == 0 || this.Factions.Count() == 0)
-                    throw new ApplicationException("You can only heal characters in your faction!");
+            if (IsAttacker(attackCharacterEvent.AttackingCharacter)) return;
+            if (IsNotAttacked(attackCharacterEvent.CharacterToAttack)) return;
+            if (IsSameFaction(attackCharacterEvent.AttackingCharacter)) return;
+            if (IsInRange(attackCharacterEvent)) return;
+            Health -= DamageReduction(attackCharacterEvent);
+            if (Health <= 0) Die();
+        }
 
-                //check to see if character to heal is in healers faction.
-                foreach (var fac in this.Factions)
-                {
-                    if (!characterToHeal.Factions.Contains(fac))
-                    {
-                        throw new ApplicationException("You can only heal characters in your faction!");
-                    }
-                }
-            }
+        private bool IsAttacker(Character attacker)
+        {
+            return attacker.CharacterId == CharacterId;
+        }
 
-            if (!this.Alive)
-            {
-                throw new ApplicationException("This player is dead and cannot be healed.");
-            }
+        private bool IsNotAttacked(Character attacked)
+        {
+            return attacked.CharacterId != CharacterId;
+        }
 
-            if (healthReceivedOverride != 0)
-            {
-                //ensure we don't go over 1000
-                this.Health = Math.Min(this.Health + healthReceivedOverride, 1000);
-            }
-            else
-            {
-                //get health to heal
-                int health = 100;
+        private bool IsSameFaction(Character attacker)
+        {
+            return Factions.Any(attacker.IsInFaction);
+        }
 
-                //ensure we don't go over 1000
-                this.Health = Math.Min(this.Health + health, 1000);
-            }
+        private bool IsInFaction(Faction faction)
+        {
+            return Factions.Contains(faction);
+        }
 
+        private static bool IsInRange(AttackCharacter attackCharacterEvent)
+        {
+            return attackCharacterEvent.Range > attackCharacterEvent.AttackingCharacter.Range;
+        }
+
+        private int DamageReduction(AttackCharacter attackCharacterEvent)
+        {
+            if ((Level - attackCharacterEvent.AttackingCharacter.Level) >= 5) return attackCharacterEvent.Damage / 2;
+            if ((attackCharacterEvent.AttackingCharacter.Level - Level) >= 5) return attackCharacterEvent.Damage * 2;
+            return attackCharacterEvent.Damage;
+        }
+
+        private void Die()
+        {
+            Alive = false;
+            Health = 0;
+
+            //unsubscribe from events on death
+            Bus.Unsubscribe<AttackCharacter>(Attack);
         }
 
         public void JoinFaction(string factionName)
@@ -153,6 +117,47 @@ namespace RPGCombat.Domain
             }
 
         }
+        public void LevelUp()
+        {
+            Level++;
+        }
 
+    }
+
+    internal static class IdGenerator
+    {
+
+        private static int nextId = 0;
+
+        public static int Next()
+        {
+            return nextId++;
+        }
+    }
+
+    public class MeleeFighter : Character
+    {
+        private MeleeFighter()
+        {
+            Range = 2;
+        }
+
+        public static Character Create()
+        {
+            return new MeleeFighter();
+        }
+    }
+
+    public class RangedFighter : Character
+    {
+        private RangedFighter()
+        {
+            Range = 20;
+        }
+
+        public static Character Create()
+        {
+            return new RangedFighter();
+        }
     }
 }
