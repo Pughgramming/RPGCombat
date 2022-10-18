@@ -10,9 +10,9 @@ namespace RPGCombat.Tests
     [TestClass]
     public class FactionTests
     {
-        #region Basic
+        #region Join/Leave
         [TestMethod]
-        public void Faction_JoinFaction_CharacterCanJoinFaction()
+        public void Faction_Join_CharacterCanJoinFaction()
         {
             //create characters
             Character character = new Character();
@@ -27,7 +27,7 @@ namespace RPGCombat.Tests
         }
 
         [TestMethod]
-        public void Faction_LeaveFaction_CharacterCanLeaveFaction()
+        public void Faction_Leave_CharacterCanLeaveFaction()
         {
             //create characters
             Character character = new Character();

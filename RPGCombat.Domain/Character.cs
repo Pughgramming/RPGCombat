@@ -1,7 +1,8 @@
-﻿using System;
+﻿using RPGCombat.Domain.DomainEvents;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using RPGCombat.Domain.DomainEvents;
+
 
 namespace RPGCombat.Domain
 {
@@ -22,6 +23,7 @@ namespace RPGCombat.Domain
             Alive = true;
             Factions = new List<Faction>();
 
+            //subscribe to domain events so handlers are called
             Bus.Subscribe<HealCharacter>(Heal);
             Bus.Subscribe<AttackCharacter>(Attack);
         }
@@ -31,59 +33,80 @@ namespace RPGCombat.Domain
         public int Range { get; set; }
         public List<Faction> Factions { get; set; }
 
-        private void Heal(HealCharacter healCharacterEvent)
+        private void Heal(HealCharacter healEvent)
         {
-            if (!Alive) return;
-            if (!HealingSelf(healCharacterEvent) && !IsSameFaction(healCharacterEvent.HealingCharacter)) return;
-            Health += healCharacterEvent.HealthGain;
-            if (Health > MaxHealth) Health = MaxHealth;
+            //check if alive
+            if (!Alive) 
+                return;
+
+            //check if we aren't healing ourself, that the other character is in our faction
+            if (!HealingSelf(healEvent) 
+                && !IsSameFaction(healEvent.HealingCharacter, healEvent.CharacterToHeal)) 
+                return;
+
+            //add health 
+            Health += healEvent.HealthGain;
+
+            //ensure we don't go over max health
+            if (Health > MaxHealth) 
+                Health = MaxHealth;
         }
 
-        private bool HealingSelf(HealCharacter healCharacterEvent)
+        private bool HealingSelf(HealCharacter healEvent)
         {
-            return healCharacterEvent.HealingCharacter.CharacterId == CharacterId && healCharacterEvent.CharacterToHeal.CharacterId == CharacterId;
+            //check if healing self
+            return healEvent.HealingCharacter.CharacterId == healEvent.CharacterToHeal.CharacterId;
         }
 
-        private void Attack(AttackCharacter attackCharacterEvent)
+        private void Attack(AttackCharacter attackEvent)
         {
-            if (IsAttacker(attackCharacterEvent.AttackingCharacter)) return;
-            if (IsNotAttacked(attackCharacterEvent.CharacterToAttack)) return;
-            if (IsSameFaction(attackCharacterEvent.AttackingCharacter)) return;
-            if (IsInRange(attackCharacterEvent)) return;
-            Health -= DamageReduction(attackCharacterEvent);
+            //check if:
+            // 1. I'm attacker
+            // 2. I'm not being attacked
+            // 3. I'm in the same faction as character being attacked
+            // 4. Character is in range
+            if (IsAttackingSelf(attackEvent)) 
+                return;
+            if (IsSameFaction(attackEvent.AttackingCharacter, attackEvent.CharacterToAttack)) 
+                return;
+            if (IsInRange(attackEvent)) 
+                return;
+
+            //if rule checks pass, then determine the damage reduction or multiplier
+            Health -= DetermineDamage(attackEvent);
+
+            //Die if health falls to zero
             if (Health <= 0) Die();
         }
 
-        private bool IsAttacker(Character attacker)
+        private bool IsAttackingSelf(AttackCharacter @event)
         {
-            return attacker.CharacterId == CharacterId;
+            return @event.AttackingCharacter.CharacterId == @event.CharacterToAttack.CharacterId;
         }
 
-        private bool IsNotAttacked(Character attacked)
+        private bool IsSameFaction(Character characterOne, Character characterTwo)
         {
-            return attacked.CharacterId != CharacterId;
+            var boolean = characterOne.Factions.Select(x => x.Name).Intersect(characterTwo.Factions.Select(y => y.Name)).Any();
+            return boolean;
         }
 
-        private bool IsSameFaction(Character attacker)
+        private static bool IsInRange(AttackCharacter @event)
         {
-            return Factions.Any(attacker.IsInFaction);
+            //check if given range from event is within the attacking characters range.
+            return @event.Range > @event.AttackingCharacter.Range;
         }
 
-        private bool IsInFaction(Faction faction)
+        private int DetermineDamage(AttackCharacter @event)
         {
-            return Factions.Contains(faction);
-        }
+            // if character being attacked is 5 levels or more higher than attacker / half damage.
+            if ((Level - @event.AttackingCharacter.Level) >= 5) 
+                return @event.Damage / 2;
 
-        private static bool IsInRange(AttackCharacter attackCharacterEvent)
-        {
-            return attackCharacterEvent.Range > attackCharacterEvent.AttackingCharacter.Range;
-        }
+            //if the attacking characters level is 5+ higher than attacked double damage.
+            if ((@event.AttackingCharacter.Level - Level) >= 5) 
+                return @event.Damage * 2;
 
-        private int DamageReduction(AttackCharacter attackCharacterEvent)
-        {
-            if ((Level - attackCharacterEvent.AttackingCharacter.Level) >= 5) return attackCharacterEvent.Damage / 2;
-            if ((attackCharacterEvent.AttackingCharacter.Level - Level) >= 5) return attackCharacterEvent.Damage * 2;
-            return attackCharacterEvent.Damage;
+            return @event.Damage;
         }
 
         private void Die()
@@ -117,11 +140,6 @@ namespace RPGCombat.Domain
             }
 
         }
-        public void LevelUp()
-        {
-            Level++;
-        }
-
     }
 
     internal static class IdGenerator
@@ -135,29 +153,29 @@ namespace RPGCombat.Domain
         }
     }
 
-    public class MeleeFighter : Character
+    public class MeleeCharacter : Character
     {
-        private MeleeFighter()
+        private MeleeCharacter()
         {
             Range = 2;
         }
 
         public static Character Create()
         {
-            return new MeleeFighter();
+            return new MeleeCharacter();
         }
     }
 
-    public class RangedFighter : Character
+    public class RangedCharacter : Character
     {
-        private RangedFighter()
+        private RangedCharacter()
         {
             Range = 20;
         }
 
         public static Character Create()
         {
-            return new RangedFighter();
+            return new RangedCharacter();
         }
     }
 }

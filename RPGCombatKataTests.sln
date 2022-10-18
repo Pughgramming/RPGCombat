@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RPGCombat.App", "RPGCombat\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RPGCombat.Tests", "RPGTests\RPGCombat.Tests.csproj", "{2AC9A3BA-D304-4A83-96F2-C27F4BD3D55D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RPGCombat.Domain", "RPGCombat.Domain\RPGCombat.Domain.csproj", "{6B40F408-D45A-4A4D-9EE8-7CE004341646}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RPGCombat.Domain", "RPGCombat.Domain\RPGCombat.Domain.csproj", "{6B40F408-D45A-4A4D-9EE8-7CE004341646}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

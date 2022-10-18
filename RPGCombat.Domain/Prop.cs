@@ -12,6 +12,7 @@ namespace RPGCombat.Domain
             Health = 1000;
             Alive = false;
 
+            //Subscribe to attack event
             Bus.Subscribe<AttackProp>(Attack);
         }
         public Prop(int health)
@@ -19,6 +20,7 @@ namespace RPGCombat.Domain
             Health = health;
             Alive = false;
 
+            //Subscribe to attack event
             Bus.Subscribe<AttackProp>(Attack);
         }
 
@@ -28,6 +30,7 @@ namespace RPGCombat.Domain
         private void Attack(AttackProp attackObjectEvent)
         {
             Health -= attackObjectEvent.Damage;
+            //if health reaches 0 destroy object
             if (Health <= 0) Destroy();
         }
 
@@ -35,6 +38,8 @@ namespace RPGCombat.Domain
         {
             Health = 0;
             Alive = false;
+
+            //unsubscribe from attack event for this prop, since it's destroyed.
             Bus.Unsubscribe<AttackProp>(Attack);
         }
     }
